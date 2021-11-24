@@ -1,0 +1,248 @@
+---
+title: "Connectedness across Foreign Exchange Markets"
+author: "Didem Gunes & Muhammet Aydin"
+date: "2019-01-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+## Packages Used in the Estimation
+packages <- c("tvReg","readxl","vars", "xts", "bvarsv", "tsbox", "tseries", "vars", "devtools","SciViews", "base")
+for(i in packages) {
+  if(i %in% rownames(installed.packages())){
+    library(i, character.only = T)
+  } else {
+    install.packages(i)
+    library(i, character.only = T)
+  }}
+
+install_github("tomaskrehlik/frequencyConnectedness", tag = "dev") 
+library(frequencyConnectedness)
+```
+<br>
+
+#### INTRODUCTION
+
+The recent Global Financial Crisis (GFC) proved how interconnectedness between markets could create a domino effect and make world economies exposed to simultaneous and negative effects.It would not be misleading to state that even though the GFC evolved in the US and then in the Europe as debt crisis, it has led a wide sphere of influence which eroded the economic performance of the world in general.
+
+Besides the GFC caused some certain uncertainty episodes stemming from consecutive capital flows towards emerging financial markets, the post-crisis and recently normalization policies conducted in advanced economies also heightened the potential of these episodes.
+
+In this context, we aim to investigate the connectedness between foreign  exchange markets by  estimating the average connectedness and time-varying spillover  measures based  on the method introduced by Diebold and Yilmaz (2009, 2011 and 2012).With this study, we try to analyze how connectedness between foreign exchange markets have evolved, and to define which exchange rates are the contributors and receivers.<br>
+<br>
+
+#### DATA
+
+The analysis cover the period between 1994, March and 2019, January and the data are gathered from Bloomberg Database. We use daily returns of exchange rates of four emerging countries which are Brazilian Real(B), Turkish Lira(T), South African Rand(Z), Chinese Yuan(C), and Euro(E) along with Great Britain Pound(G) as benchmarks of advanced countries. <br>
+The logic behind selecting these currencies is that while those of advanced countries are the most rated ones globally, currencies of emerging countries are exposed to the similar external shocks as being peer in terms of economic performance. <br>
+
+```{r}
+## Data Used in the Project
+dataset<-read_excel("dataset2.xlsx")
+colnames(dataset)<-c("DATE","B","T","Z","C","E","G")
+dataset<-dataset[!is.na(dataset$DATE),]
+```
+
+Since daily returns of exchange rates are preffered, it is highly like that the variables are stationary.To be sure, a unit root test based  on Augmented Dickey-Fuller (ADF) is performed and confirmed the variables do not have unit  root. The results  of ADF test are as follows:<br>
+ 
+#### Unit Root Testing
+```{r warning=FALSE}
+data.ts<-as.ts(dataset[,-1])
+colnames(data.ts)<-c("B","T","Z","C","E","G")
+adf<-lapply(1:ncol(data.ts), function(x) adf.test(na.omit(data.ts[,x])))
+adf[1:ncol(data.ts)]
+```
+
+Regarding the method followed, as a first step we measured the average connectedness between those exchange rates over the period 1994-2019. And then in order to reveal the evolution of the connectedness and the main sources along with main receiver markets, we apply a dynamic spillover estimation using rolling window.
+<br>
+<br>
+
+#### METHODOLOGY
+Even though the notion of connectedness between markets or financial assets took stage in the 80s, the GFC and its unfavorable outcomes enhanced its popularity. As a result of common understanding on potential of interconnectedness between international markets, there have been increasing number of studies and approaches including selection of raw indicatiors, methods, and perspectives to reveal the correlation between markets. 
+
+Regarding the methodology used in the study, we apply the approach developed by Diebold and Yilmaz (2009, 2011 and 2012) to investigate connectedness between foreign  exchange markets. In order to measure interdependence of related variables, which is called spillover index in literature, firstly a VAR estimation has been applied and then a generalized variance decomposition (GVD) procudure has been performed. 
+
+Before presenting the results of the study, we thought it would be better to outline the fundamental principles of the Diebold and Yilmaz interconnectedness method and to submit the details about tools and the approaches provides.
+
+####1. Generalized Spillover Methodology
+
+Generalized spillover methodology basically relies on variance decomposition with an N-variable vector autoregression and takes into account a covariance stationary N-variable VAR(p), where $\epsilon ~ (0,\Sigma)$ is a vector of independently and identically distributed. The moving average representation is $x_{t}=\sum_{i=0}^{\infty} A_i\epsilon_{t-i}$. The moving average coefficients are essential to figure out the dynamics of the system. Through variance decompositions, the forecast error variances of variables divide into fractions which is attributed to the system shocks. In other words, by means of an H-step forecast error variance decomposition, dij, it is estimated what fraction of H-step forecast error variance of the variable i is due to shocks in another variable j. 
+
+If shocks in reduced-form vector autoregressions were orthogonal, variance decomposition calculations would be trivial. That is, variance decompositions are easily calculated in orthogonal VARs because orthogonality ensures that the variance of a weighted sum is simply an appropriately-weighted sum of variances. The much more realistic case involves correlated VAR shocks. Consider therefore a data-generating process with correlated shocks. The variance decomposition calculations are more involved because we first need to isolate the independent shocks that underlie the observed system. One way or another, we must transform the shocks to orthogonality to calculate variance decompositions.
+
+The orthogonalization of the shocks might be handled in a couple of ways including Cholesky factorization and GVD. In this study, since Cholesky factorization is dependent on the order of variables, the GVD which is invariant to ordering is applied. In other words, GVD does not rely on the orthgonality of shocks, and all variables in a system are exposed to shocks at the same time. 
+
+**_Variance Shares_**
+
+"Own variance share" is defined as the fractions of the H-step-ahead error variances in forecasting xi due to the shocks to xi, for i=1, 2,...,N,, whereas “cross variance shares or spillovers” is denoted as the fractions of the H-step-ahead error variances in forecasting xi due to the shocks xj, for i, j=1,2,...,N, such that i ≠ j.
+
+$$\theta^g_{ij}(H) = \frac{\delta_{ii}^{-1}\sum_{h=0}^{H-1}(e'_iA_h\sum e_j)2}{\sum_{h=0}^{H-1}(e'_iA_h\sum A'_he_j)}$$
+
+
+$\theta^g_{ij}(H)$ is named as H-step-aheaf forecast error variance decompositions for H=1,2,...,ij where $\Sigma$ is the matrix of variance for the error vector.$\delta_{ii}$ is the standard deviation of the error term and $e_i$ is the selection vector with 1 as the ith element and 0 otherwise.
+
+Given that the shocks are not orthogonalized, the sum of contributions to the variance of forecast does not equal to one $\sum_{j=1}^{N}\theta_{ij}^{g}(H) \neq 1$. Thus, to provide information available in the variance decomposition matrix in the computation of the spillover index, we have normalized each entry of decomposition matrix by the row sum:
+
+$$\tilde{\theta}_{ij}^{g}(H)=\frac{\theta_{ij}^{g}(H)}{\sum_{j=1}^{N}\theta_{ij}^g(H)}$$
+
+In the end of this process, we have received that$\sum_{j=1}^N\tilde{\theta}_{ij}^g(H)=1$
+$\sum_{i,j=1}^N\tilde{\theta}_{ij}^g(H)=N$
+
+**_Total Spillovers_**
+
+Through the KPSS analog of Cholesky factor based measure used in Diebold and Yilmaz (2009), a total spillover index is provided by using all contributions of spillovers of shocks across those asset classes to the total forecast error variance.
+
+$$S^g(H)=\frac{\sum_{i,j=1}^{N}\tilde{\theta}_{ij}^g(H) \\ i \neq j}{\sum_{i,j=1}^N\tilde{\theta}_{ij}^g(H)}i100=\frac{\sum_{i,j=1}^{N}\tilde{\theta}_{ij}^g(H) \\ i \neq j}{N}i100$$
+
+**_Directional Spillovers_**
+
+Even though the approach provides a general figure of the evolution of the spillover,the generalized VAR approach makes it possible us to learn about the direction of volatility spillovers between those asset classes. Because the generalized impulse responses and variance decompositions are invariant to the ordering of variables, it is computed the directional spillovers using the normalized components of GVD matrix. We measure directional volatility spillovers received by market i from all other markets j as:
+
+$$S_{i.}^g(H)=\frac{\sum_{j=1}^N \tilde{\theta}_{ij}^g(H) \\ i\neq j}{\sum_{i,j=1}^N \tilde{\theta}_{ij}^g(H)}100=\frac{\sum_{j=1}^N \tilde{\theta}_{ij}^g(H) \\ i\neq j}{N}100$$
+Similarly, we measure directional volatility spillovers transferred by market i to all other markets j as:
+
+$$S_{i.}^g(H)=\frac{\sum_{j=1}^N \tilde{\theta}_{ji}^g(H) \\ i\neq j}{\sum_{i,j=1}^N \tilde{\theta}_{ji}^g(H)}100=\frac{\sum_{j=1}^N \tilde{\theta}_{ji}^g(H) \\ i\neq j}{N}100$$
+
+**_Net Spillovers_**
+
+Moreover,the net volatility spillover which is simply the difference between gross volatility shocks transmitted to and gross volatility shocks received from all other variables, can be measured as:
+
+$$S^g_i(H)=S^g_{ij}(H)-S^g_{ji}(H)$$
+
+
+**_Net Pairwise Spillovers_**
+
+While net spillover allows us to examine the contribution of each variable to all other variables' spillover, one might aim to analyze the net pairwise spillover between markets i and j, which is simply the difference between gross volatility shocks transmitted from market i to j and gross volatility shocks transmitted from j to i.
+
+$$S^g_{ij}(H)= [\frac{\tilde{\theta}_{ij}^g(H)}{\sum_{k=1}^N\tilde{\theta}_{ik}^g(H)}-\frac{\tilde{\theta}_{ji}^g(H)}{\sum_{k=1}^N\tilde{\theta}_{jk}^g(H)}]i100$$
+
+####2. Connectedness Table and Plots 
+
+**_A. Average Connectedness: The Connectedness Table_**
+
+Variables| $X_1$ | $X_2$ | $X_3$ | $X_4$ | From Others
+------------- | ------------- | ------------- | ------------- |------------- | -------------
+$X_1$ | 96 | 1 | 2 | 1 | 4
+$X_2$ | 28 | 67 | 1 | 3 | 32
+$X_3$ | 14 | 14 | 7 | 1 | 29
+$X_4$ | 18 | 11 | 5 | 65 | 34
+**To Others** | 60 | 26 | 8 | 5 | %25 = Average Total Connectedness
+**Net Contribution (To-From) Others** | 56 | -6 | -21 | -29 | 
+
+In the average connectedness table, the row 3, column 2 entry of 14, for example, means that shocks to $x_2$ are responsible for 14 percent of the H-step-ahead forecast error variance in $x_3$ and might be demonstrated as $C_{3,2}$= 14. The total cross-variable variance contribution, shown in the lower right cell of the connectedness table is a percent of total variation. Therefore, in this example total connectedness is $C$=99/400*100 = 24.8 which means that total connectedness is simply average total directional connectedness whether "from" or "to".In other words, because average total connectedness for Xi variables is almost %25, the remaining %75 is expressed by the idiosyncratic shocks. 
+
+**_B. Dynamic Connectedness: Spillover Plots_**  
+
+The connectedness table provides a general view on how the connectedness index is computed and interpreted. Although the connectedness table is a simple and important starting point, it would lead to significant jumps in the connectedness index when enlarging the sample with new observations. At this point, dynamic nature of spillovers across variables have been searched by some. To attribute this case, the transformation of spillover variation is inspected graphically in the rolling sample volatility spillover plots including gross, directional, net and pairwise versions.
+<br>
+
+#### EMPIRICAL RESULTS
+####1. Spillover between Foreign Exchange Markets of Emerging and Advanced Economies
+
+As stated above, in the first step we aim to study average connectedness between exhange rates of some emerging and advanced countries. 
+
+In order to estimate the VAR model, the optimum lag length is selected based on the Schwarz information criterion.<br>
+
+```{r}
+## Optimum Lag Selection
+opt.lag<-VARselect(data.ts, lag.max=10)$selection
+aic<-as.numeric(VARselect(data.ts, lag.max=10)$selection[1])
+hq<-as.numeric(VARselect(data.ts, lag.max=10)$selection[2])
+sc<-as.numeric(VARselect(data.ts, lag.max=10)$selection[3])
+fpe<-as.numeric(VARselect(data.ts, lag.max=10)$selection[4])
+opt.lag
+```
+
+<br>
+Then the VAR estimation is made:
+```{r}
+## Estimation of VAR
+est <- VAR(data.ts, p = sc, type = "const")
+```
+
+Following VAR estimation, the average connectedness between daily returns of foreign exchange rates are estimated through the spilloverDY12 function of the frequencyConnectedness Package.
+Before citing the results, it is essential to explain the rows and columns of the spillover table. The 𝑖𝑗𝑡h entry is the estimated contribution to the forecast error variance of market 𝑖 coming from innovations to market 𝑗. The diagonal elements measure the own-market volatility spillover and the off-diagonal elements measure the cross-market volatility spillover. Therefore the off- diagonal column sum (Contributions to others) and row sum (Contribution from others) are the „to‟ and „from‟ volatility spillovers in each market and the difference between „from and to‟ gives the net volatility spillover from market 𝑖 to market 𝑗. The total volatility spillover index appears in the lower right corner of the table shows the grand off-diagonal column sum (row sum) relative to the grand column sum including diagonals (row sum including diagonals) expressed in percentage. <br>
+
+```{r}
+## Estimation of Traditional Connectedness: Connectedness Table
+sptable <- spilloverDY12(est, n.ahead = 50, no.corr = F)
+
+## Spillover Tables 
+print(sptable)
+print(to(sptable))
+print(from(sptable))
+print(net(sptable))
+print(pairwise(sptable))
+```
+<br>
+
+The table above exhibits the outcomes of the average nalysis for spillover between six exchange rates: The average spillover index is about 25% which indicates the quarter of the total variance of the forecast errors is attributed to the connectedness of shocks across exchange rates, whereas the remaining 75% is explained by idiosyncratic and other external shocks.
+We see from “the directional to” row that as expected Euro and British Pound are the main sources of volatility spillover to those foreign exchange rates, but it is mainly related to the high connectedness between Euro and British Pound at 6.13 and 5.88 % of forecast error variance respectively  as seen in the “directional from” column.
+
+Another point is that the transmission to Chinese Yuan from other markets is vey limited. It would not be surprise, because Renminbi's internalization came true after 2010. Another point which is stated in global benchmark the 2016 Triennial Survey whilst the renminbi was the most actively traded emerging market currency, and the world’s eighth most actively traded currency, its share in global FX turnover by value is only 4 percent.  
+
+Regarding the net spillovers, while Euro and British Pound became the major sources of the spillover across those markets, Turkish Lira and Chinese Yuan recevied uncertainty at most from all other markets.<br>
+
+Even though the connectedness table provides some certain clues on the interconnectedness across individual financial instruments and markets, it does not picturize the evolution of the correlation between those markets and instruments. So, we performed another VAR estimation with 1 lag and the time-varying connectedness is calculated for a 200-day rolling window with a 50-day forecast horizon.<br>
+
+####2. Estimation of Dynamic Connectedness: Spillover Indices
+```{r}
+# Rolling Window Estimation
+params_est = list(p = sc, type = "const")
+
+spindex2 <- spilloverRollingDY12(data.ts, n.ahead = 50, no.corr=F, "VAR", params_est = params_est, window = 200, cluster = NULL)
+
+```
+
+```{r}
+# Plotting Results of Rolling Estimation
+plotOverall(spindex2)
+plotTo(spindex2)
+plotFrom(spindex2)
+plotNet(spindex2)
+plotPairwise(spindex2)
+
+```
+<br>
+With respect to the evolution of connectedness between those currencies, the spillover index exhibits some certain fluctuations:<br>
+-The first one is located around 1998, could be attributed to the oil price crisis.<br>
+-The second which is actually an increasing uncertainty period which reached its peak around 2007 could be related to the pre-GFC period when the markets were giving over signals of heating. <br>
+-The last peak seen around 2013 might be arisen from the normalization process of advanced countries and the risks they caused toward emerging markets. <br>
+
+In short, it would not be misleading to say that total spillover varies significantly and is highly responsive to the international economic fluctations. 
+
+Regarding directional spillovers, gross spillovers received from all foreign exchange markets increased considerably during the stress episodes in 2006 and mid-2013. On average, we see that Brazilian Real receives the highest level of stress spillover while Euro and British Pound are the main senders to other foreign exchange markets.
+Pairwise spillover plots also prove that Euro and British Pound are the main contributors of shocks to other foreign exchange rates. Moreover, it is worth saying that Brazilian Real is the net receiver of shocks from Euro and British Pound in general.
+
+
+####CONCLUSION
+Following Diebold and Yilmaz (2009, 2011 and 2012), a cross-market volatility transmission analysis based on average and dynamic spillover measures for some emerging and advanced markets show that during heightened stress episodes along with policy actions of advanced countries, the connectedness among those six foreign exchange markets displays a tendency to increase. 
+
+The average spillover index for the whole period shows that about 25% of the total variance of the forecast errors is explained by the connectedness of shocks across those foreign exchange markets, whereas the remaining 76% is explained by idiosyncratic and other external shocks. Moreover, while Euro and British Pound became the major sources of the spillover across those markets, Turkish Lira and Chinese Yuan recevied uncertainty at most from all other markets.<br>
+
+Regarding directional spillovers, gross spillovers received from all foreign exchange markets increased considerably during the stress episodes in 2006 and mid-2013. On average, we see that Brazilian Real receives the highest level of stress spillover while Euro and British Pound are the main senders to other foreign exchange markets.<br>
+
+
+####REFERENCES
+
+Acharya, V. V., Pedersen, L. H., Philippon, T., & Richardson, M. (2010). Measuring Systemic Risk.? Working paper, Federal Reserve Bank of Cleveland, Cleveland, OH.
+
+Adrian, T., & Brunnermeier, M. K. (2008). CoVaR Staff Report No. 348. New York: Federal Reserve Bank.
+
+Diebold, F. X., & Yilmaz, K. (2009). Measuring Financial Asset Return and Volatility Spillovers, with Application to Global Equity Markets. The Economic Journal, 158-171.
+
+Diebold, F. X., & Yilmaz, K. (2010). Better to Give that to Receive: Predictive Directional Measurement of Volatility Spillovers. International Journal of Forecasting.
+
+Diebol, F. X., & Yilmaz, K. (2012). Better to give than to receive: Predictive directional measurement of volatility spillovers. International Journal of Forecasting, 57-66.
+
+Diebold, F., & Yilmaz, K. (2013). Measuring the dynamics of global business cycle connectedness.
+
+Diebold, F. X., & Yilmaz, K. (2015). Financial and macroeconomic connectedness: A network approach to measurement and monitoring. Oxford University Press, USA.
+
+Diebold, F. X., & Yilmaz, K. (2015). Trans-Atlantic equity volatility connectedness: US and European financial institutions, 2004-2014. Journal of Financial Econometrics, 14(1), 81-127.
+
+Koop, G., Pesaran, M. H., & Potter, S. M. (1996). Impulse response analysis in nonlinear multivariate models. Journal of econometrics, 74(1), 119-147.
+
+Pesaran, H. H., & Shin, Y. (1998). Generalized impulse response analysis in linear multivariate models. Economics letters, 58(1), 17-29.
+
+Yilmaz, K., & Bostanci, G. (2015, August). How Connected is the Global Sovereign Credit Risk Network? KU-TUSIAD ERF Working Paper, No. 1512.
+
