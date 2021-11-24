@@ -1,4 +1,4 @@
-# Connectedness-across-Foreign-Exchange-Markets
+# Connectedness-across-Foreign-Exchange-Markets (Rmarkdown Script)
 Connectedness across Foreign Exchange Markets
 
 The recent Global Financial Crisis (GFC) proved how interconnectedness between markets could create a domino effect and make world economies exposed to simultaneous and negative 
